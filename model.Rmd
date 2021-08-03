@@ -9,9 +9,17 @@ output:
 knitr::opts_chunk$set(echo = F, warning = F, message = F)
 ```
 
+
 ```{r setup}
-pacman::p_load(tidyverse, janitor, googlesheets4, lme4, emmeans, car)
+pacman::p_load(tidyverse, janitor, googlesheets4, googledrive, lme4, emmeans, car)
 load("data/data.RData")
+gs4_auth(email = "edwardsmolina@gmail.com")
+googledrive::drive_auth(email = "edwardsmolina@gmail.com")
+source("setup.R")
+```
+
+```{r}
+update_drive("plots", "juanchi_javi/phomopsis_tandilia")
 ```
 
 # Incidencia
@@ -24,8 +32,6 @@ mod_inc <- glmer(inc_pc/n_plantas ~ hibrido + (1|localidad),
 plot(mod_inc)
 summary(mod_inc)
 Anova(mod_inc)
-plot(ranef(mod_inc))
-
 # mod_inc1 <- glmer(inc_pc/n_plantas ~ hibrido + (1|localidad), 
 #                  weights=n_plantas, 
 #                  family="binomial", 
@@ -55,9 +61,7 @@ p1 <- res_inc %>% #View
   labs(x=NULL, y="Incidencia de phomoposis de capítulo (%)", 
        col= "Test Tukey (10%)")+
   coord_flip()+
-  theme_bw()+
-  theme(axis.text=element_text(size=10), 
-        axis.title=element_text(size=10, face = "bold"))
+  my_theme
 
 p1
 ```
@@ -113,9 +117,7 @@ p2 <- res_rinde %>% #View
   labs(x=NULL, y="Rendimiento bonificado (kg/ha)", 
        col= "Test Tukey (10%)")+
   coord_flip()+
-  theme_bw()+
-  theme(axis.text=element_text(size=10), 
-        axis.title=element_text(size=10, face = "bold"))
+  my_theme
 p2
 ```
 
