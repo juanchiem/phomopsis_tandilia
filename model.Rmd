@@ -17,7 +17,7 @@ load("data/data.RData")
 # Incidencia
 
 ```{r}
-mod_inc <- glmer(inc_pc/n_plantas ~ hibrido + (1|localidad/hibrido), 
+mod_inc <- glmer(inc_pc/n_plantas ~ hibrido + (1|localidad), 
                  weights=n_plantas, 
                  family="binomial", 
                  df)
@@ -87,12 +87,9 @@ mod_rinde <- lm(rinde_bonif ~ hibrido + localidad, data=df)
 plot(mod_rinde, which=1)
 summary(mod_rinde)
 Anova(mod_rinde)
-mod_rinde1 <- lm(rinde_bonif ~ hibrido * localidad, data=df)
-anova(mod_rinde1, mod_rinde)
 ```
 
 ```{r}
-em_rinde_loca <- emmeans(mod_rinde, ~localidad)
 em_rinde <- emmeans(mod_rinde, ~hibrido)
 
 res_rinde <- multcomp::cld(em_rinde, 
@@ -127,7 +124,7 @@ library(patchwork)
 combined <- p1 + p2 & theme(legend.position = "bottom")
 combined
 
-ggsave(last_plot(), file = "plots/inc_rend.png", w=9, h=4.5)
+ggsave(last_plot(), file = "plots/inc_rend.png", w=9, h=5)
 ```
 
 
@@ -135,13 +132,9 @@ ggsave(last_plot(), file = "plots/inc_rend.png", w=9, h=4.5)
 res_rinde %>% 
   inner_join(res_inc, by="hibrido") %>% 
   rownames_to_column("id") %>%  
-  mutate(id_hibrido = factor(paste(id, hibrido, sep = ": "))) %>% 
-  mutate(id_hibrido = fct_relevel(id_hibrido, "1: LG50760", "2: Z74L60", 
-                                  "3: Adv5205", 
-                    "4: Z74H55", "5: Syn3939", "6: NS1109",
-                    "7: NU4170", "8: B304", "9: P106", 
-                    "10: Syn3970", "11: Syn4070", "12: Syn3975",
-                  "13: Syn3990")) %>%  
+  mutate(id_hibrido = paste(id, hibrido, sep = ": ")) %>%
+  # pull(id_hibrido) -> list_id_hibridos
+  mutate(id_hibrido = fct_relevel(id_hibrido, list_id_hibridos)) %>%  
   # str
   ggplot(aes(prob, emmean, col=id_hibrido)) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
