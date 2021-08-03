@@ -14,7 +14,7 @@ Data
 gs4_auth(email = "edwardsmolina@gmail.com")
 # gs4_find() %>% view
 aapre <- gs4_get("1jJYThqPMd-ZMWmJyq-CDhzVhNTFC1zoJ3RS75-taUOc")
-# aapre %>% gs4_browse()
+aapre %>% gs4_browse()
 raw <- aapre %>% read_sheet() %>% 
   janitor::clean_names() %>% 
   mutate_if(is.character, as.factor) 

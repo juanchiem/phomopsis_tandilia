@@ -25,6 +25,13 @@ update_drive("plots", "juanchi_javi/phomopsis_tandilia")
 # Incidencia
 
 ```{r}
+df %>%
+  group_by(localidad) %>%
+  skimr::skim()
+```
+
+
+```{r}
 mod_inc <- glmer(inc_pc/n_plantas ~ hibrido + (1|localidad), 
                  weights=n_plantas, 
                  family="binomial", 
@@ -135,7 +142,7 @@ res_rinde %>%
   inner_join(res_inc, by="hibrido") %>% 
   rownames_to_column("id") %>%  
   mutate(id_hibrido = paste(id, hibrido, sep = ": ")) %>%
-  # pull(id_hibrido) -> list_id_hibridos
+  # pull(id_hibrido) -> list_id_hibridos # unmute - run - mute
   mutate(id_hibrido = fct_relevel(id_hibrido, list_id_hibridos)) %>%  
   # str
   ggplot(aes(prob, emmean, col=id_hibrido)) +
@@ -153,7 +160,6 @@ res_rinde %>%
         legend.title = element_text(size=12, face = "bold"))
 
 ggsave(last_plot(), file = "plots/mix.png",w=8, h=4)
-
 ```
 
 
