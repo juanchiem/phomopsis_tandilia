@@ -1,0 +1,165 @@
+---
+title: "Phomopsis de capitulo - Reg. Tandilia - 2020/21"
+output:
+  rmdformats::robobook:
+    highlight: kate
+---
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r setup}
+pacman::p_load(tidyverse, janitor, googlesheets4, lme4, emmeans, car)
+load("data/data.RData")
+```
+
+# Incidencia
+
+```{r}
+mod_inc <- glmer(inc_pc/n_plantas ~ hibrido + (1|localidad/hibrido), 
+                 weights=n_plantas, 
+                 family="binomial", 
+                 df)
+plot(mod_inc)
+summary(mod_inc)
+Anova(mod_inc)
+plot(ranef(mod_inc))
+
+# mod_inc1 <- glmer(inc_pc/n_plantas ~ hibrido + (1|localidad), 
+#                  weights=n_plantas, 
+#                  family="binomial", 
+#                  df) 
+# anova(mod_inc1, mod_inc)
+```
+
+
+```{r}
+em <- emmeans (mod_inc, ~hibrido)
+res_inc <- multcomp::cld(em, Letters = letters, alpha = .1, type = "response") %>% 
+  mutate_at(vars(matches('prob|asymp')), ~(. * 100 )%>% round(2)) %>% 
+  mutate(let= str_remove_all(.group, " "))
+knitr::kable(res_inc)
+```
+
+```{r}
+p1 <- res_inc %>% #View 
+  ggplot(aes(x=fct_reorder(hibrido, prob, .desc = TRUE), y=prob)) + 
+  geom_point(data=df, 
+             aes(x =fct_reorder(hibrido, inc_pc, .desc = TRUE, .fun = mean),
+                 y=inc_pc), alpha=.2)+
+  geom_pointrange(aes(ymin = asymp.LCL, ymax = asymp.UCL, col= let), size=.3)+
+  geom_text(aes(label = prob %>% round(1), y =prob),
+            size=2.5, position = position_dodge(0.9), 
+            vjust =-.5, hjust="center")+
+  labs(x=NULL, y="Incidencia de phomoposis de capítulo (%)", 
+       col= "Test Tukey (10%)")+
+  coord_flip()+
+  theme_bw()+
+  theme(axis.text=element_text(size=10), 
+        axis.title=element_text(size=10, face = "bold"))
+
+p1
+```
+
+# Rinde 
+
+```{r}
+df %>% 
+  ggplot()+
+  aes(x=reorder(hibrido, inc_pc, mean), y=kg_ha, col=localidad)+
+  stat_summary(fun.data = "mean_cl_boot", colour = "gray70", size = 0.5)+
+  geom_point(alpha=.9)+
+  # facet_grid(semillero~., scales = "free")+
+  coord_flip()+
+  theme_bw()+
+  labs(x="", y="kg/ha bonificado")
+
+xtabs(rinde_bonif ~ hibrido + localidad, df)
+```
+
+
+```{r}
+mod_rinde <- lmer(rinde_bonif ~ hibrido + (1|localidad), 
+                 df)
+
+mod_rinde <- lm(rinde_bonif ~ hibrido + localidad, data=df)
+plot(mod_rinde, which=1)
+summary(mod_rinde)
+Anova(mod_rinde)
+mod_rinde1 <- lm(rinde_bonif ~ hibrido * localidad, data=df)
+anova(mod_rinde1, mod_rinde)
+```
+
+```{r}
+em_rinde_loca <- emmeans(mod_rinde, ~localidad)
+em_rinde <- emmeans(mod_rinde, ~hibrido)
+
+res_rinde <- multcomp::cld(em_rinde, 
+                           Letters = letters, 
+                           alpha = .1, reverse = TRUE, 
+                           type = "response") %>% 
+  mutate(let= str_remove_all(.group, " "))
+knitr::kable(res_rinde)
+```
+
+```{r}
+p2 <- res_rinde %>% #View 
+  ggplot(aes(x=fct_reorder(hibrido, emmean, .desc = F), y=emmean)) + 
+  geom_point(data=df, 
+             aes(x =fct_reorder(hibrido, rinde_bonif, .desc = F, .fun = mean),
+                 y=rinde_bonif), alpha=.2)+
+  geom_pointrange(aes(ymin = lower.CL, ymax = upper.CL, col= let), size=.3)+
+  geom_text(aes(label = emmean %>% round(), y =emmean),
+            size=2.5, position = position_dodge(0.9), 
+            vjust =-.5, hjust="center")+
+  labs(x=NULL, y="Rendimiento bonificado (kg/ha)", 
+       col= "Test Tukey (10%)")+
+  coord_flip()+
+  theme_bw()+
+  theme(axis.text=element_text(size=10), 
+        axis.title=element_text(size=10, face = "bold"))
+p2
+```
+
+```{r}
+library(patchwork)
+combined <- p1 + p2 & theme(legend.position = "bottom")
+combined
+
+ggsave(last_plot(), file = "plots/inc_rend.png", w=9, h=4.5)
+```
+
+
+```{r}
+res_rinde %>% 
+  inner_join(res_inc, by="hibrido") %>% 
+  rownames_to_column("id") %>%  
+  mutate(id_hibrido = factor(paste(id, hibrido, sep = ": "))) %>% 
+  mutate(id_hibrido = fct_relevel(id_hibrido, "1: LG50760", "2: Z74L60", 
+                                  "3: Adv5205", 
+                    "4: Z74H55", "5: Syn3939", "6: NS1109",
+                    "7: NU4170", "8: B304", "9: P106", 
+                    "10: Syn3970", "11: Syn4070", "12: Syn3975",
+                  "13: Syn3990")) %>%  
+  # str
+  ggplot(aes(prob, emmean, col=id_hibrido)) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), 
+                width = 0, size = 0.8, alpha=.5) +
+  geom_errorbarh(aes(xmin = asymp.LCL, xmax = asymp.UCL),  
+                 height = 0, size = 0.8, alpha=.5)+ 
+  geom_text(aes(label=id), col="black", fontface="bold", size=3)+
+  theme_bw()+
+  labs(x="Incidencia podredumbre de capítulo (%)", 
+       y="Rinde bonificado (kg/ha)", 
+       col= "Híbrido")+
+  theme(axis.text=element_text(size=10), 
+        axis.title=element_text(size=12, face = "bold"), 
+        legend.title = element_text(size=12, face = "bold"))
+
+ggsave(last_plot(), file = "plots/mix.png",w=8, h=4)
+
+```
+
+
+

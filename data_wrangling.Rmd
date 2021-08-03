@@ -1,0 +1,36 @@
+
+```{r echo=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r setup}
+pacman::p_load(tidyverse, janitor, googlesheets4, lme4, emmeans, car)
+load("data/data.RData")
+```
+
+Data 
+
+```{r}
+gs4_auth(email = "edwardsmolina@gmail.com")
+# gs4_find() %>% view
+aapre <- gs4_get("1jJYThqPMd-ZMWmJyq-CDhzVhNTFC1zoJ3RS75-taUOc")
+# aapre %>% gs4_browse()
+raw <- aapre %>% read_sheet() %>% 
+  janitor::clean_names() %>% 
+  mutate_if(is.character, as.factor) 
+```
+
+```{r}
+df <- raw %>% 
+  group_by(localidad, hibrido) %>% 
+  summarise(inc_pc = mean(inc_pc) %>% floor(), 
+            sev_pc = mean(sev_pc), 
+            kg_ha = first(kg_ha), 
+            mg_percent = first(mg_percent), 
+            .groups="drop") %>% 
+  mutate(n_plantas=100) %>% 
+  mutate(rinde_bonif = kg_ha*(1+((mg_percent-42)*2)/100)) 
+
+save(df, raw, file="data/data.RData")
+```
+
